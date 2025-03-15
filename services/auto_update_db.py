@@ -20,8 +20,8 @@ def nowtime():
     return time.strftime("%Y.%m.%d_%H.%M.%S",time.localtime())
 def update_db():
     try:
-        secret_id = 'AKID5uuIRLAKfmehV3IMgla8h2nL4xa8eooZ'      # 替换为用户的 secretId(登录访问管理控制台获取)
-        secret_key = 'B7C3A1bx24wCCPO6YjE6Zl8H9k3ejQpP'      # 替换为用户的 secretKey(登录访问管理控制台获取)
+        secret_id = ''      # 替换为用户的 secretId(登录访问管理控制台获取)
+        secret_key = ''      # 替换为用户的 secretKey(登录访问管理控制台获取)
         region = 'ap-chongqing'     # 替换为用户的 Region
         token = None                # 使用临时密钥需要传入 Token，默认为空，可不填
         scheme = 'https'            # 指定使用 http/https 协议来访问 COS，默认为 https，可不填
