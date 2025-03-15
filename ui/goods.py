@@ -23,6 +23,13 @@ class AddorEditGoodsDialog(wx.Dialog):
         catagory_label = wx.StaticText(self, wx.ID_ANY, '所属分类：')
         price_label = wx.StaticText(self, wx.ID_ANY, '单价：')
         order_label = wx.StaticText(self, -1, "显示顺序：")
+        barcode_label = wx.StaticText(self, wx.ID_ANY, '条形码：')
+
+        self.tc_barcode = wx.TextCtrl(self, wx.ID_ANY, '')
+        self.tc_barcode.SetMaxLength(20)  # 可根据实际情况调整长度
+
+
+
         order_label.SetHelpText('用于控制在物品树中的显示顺序，值越大越靠前')
         
         self.tc_goodsName = wx.TextCtrl(self, wx.ID_ANY,'')
@@ -52,7 +59,12 @@ class AddorEditGoodsDialog(wx.Dialog):
         gbSizer.Add(self.tc_goodsPrice, (3,1), (1, 1),  wx.ALL|wx.EXPAND, 5)    
         gbSizer.Add(order_label, (4,0), (1, 1),  wx.ALIGN_RIGHT | wx.ALL, 5)        
         gbSizer.Add(self.tc_order, (4,1), (1, 1),  wx.ALL|wx.EXPAND , 5)
+
+        gbSizer.Add(barcode_label, (5, 0), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
+        gbSizer.Add(self.tc_barcode, (5, 1), (1, 1), wx.ALL | wx.EXPAND, 5)
+
         gbSizer.AddGrowableCol(1)
+
         line = wx.StaticLine(self, -1, size=(20, -1), style=wx.LI_HORIZONTAL)
         
         save_btn = wx.Button(self, wx.ID_OK, label="保存")
@@ -105,8 +117,13 @@ class AddorEditGoodsDialog(wx.Dialog):
         if goodsservice.exists(goods_name, self.goods_id):
             msg = '[{}]该物品已经存在，请重新输入!'.format(goods_name)
             self.info.ShowMessage(msg, wx.ICON_WARNING)
-            return 
-        
+            return
+
+        barcode = self.tc_barcode.GetValue().strip()
+
+        if barcode == '':
+            self.info.ShowMessage('条形码不能为空！', flags=wx.ICON_WARNING)
+            return
         goods_unit = self.tc_goodsUnit.GetValue().strip()
         if goods_unit == '':
             self.info.ShowMessage('物品规格不能为空！', flags=wx.ICON_WARNING)
@@ -136,7 +153,8 @@ class AddorEditGoodsDialog(wx.Dialog):
                 'goods_unit' : goods_unit,
                 'catagory_id': catagory_id,
                 'goods_price': goods_price,
-                'save_time': utils.now()
+                'save_time': utils.now(),
+                'barcode': barcode  # 添加条形码到字典中
                 }
         goodsservice.add_or_update_goods(goods_dict)
         wx.MessageBox(self.msg, '温馨提示', wx.OK_DEFAULT | wx.ICON_INFORMATION)
