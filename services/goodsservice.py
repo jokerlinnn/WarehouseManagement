@@ -4,15 +4,14 @@ def exists(goods_name, goods_id=-1):
     sql = '''select count(1) from goods where goods_name = :goods_name and id != :goods_id'''
     return db.count(sql, (goods_name, goods_id))
 
-
 def add_or_update_goods(goods_dict: dict):
     update_sql = '''update goods set goods_name =:goods_name, goods_order=:goods_order, \
-        goods_unit=:goods_unit , goods_price=:goods_price, catagory_id=:catagory_id, update_time =:save_time where id =:goods_id'''
-    insert_sql = '''insert into goods ( goods_name, goods_order, goods_unit, goods_price , catagory_id) \
-        values( :goods_name ,:goods_order, :goods_unit, :goods_price, :catagory_id)'''
+        goods_unit=:goods_unit , goods_price=:goods_price, catagory_id=:catagory_id, update_time =:save_time, barcode =:barcode where id =:goods_id'''
+    insert_sql = '''insert into goods ( goods_name, goods_order, goods_unit, goods_price , catagory_id, barcode) \
+        values( :goods_name ,:goods_order, :goods_unit, :goods_price, :catagory_id, :barcode)'''
     if not  db.update(update_sql, goods_dict):
         db.insert(insert_sql, goods_dict)
-    
+
 def delete_goods(goods_id):
     sql = '''delete from goods where id = ?'''
     return db.delete(sql, (goods_id,))
