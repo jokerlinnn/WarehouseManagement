@@ -12,7 +12,7 @@ class CustomTaskBarIcon(wx.adv.TaskBarIcon):
         self.frame = frame
 
         icon = self.MakeIcon(images.logo.GetImage())
-        self.SetIcon(icon,'重大二食堂仓库管理系统')
+        self.SetIcon(icon,'拓建公司出入库管理系统')
         
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DCLICK, self.OnTaskBarActivate)
         self.Bind(wx.EVT_MENU, self.OnTaskBarActivate, id=self.TBMENU_RESTORE)
