@@ -2,33 +2,37 @@
 -------------------system module-------------------
 '''
 import wx
-
+import os
 '''
 -------------------user module---------------------
 '''
 import images
-
+from cryptography.fernet import Fernet
 from ui.main import MainFrame
 from services import userservice
 
 from services.auto_update_db import update_db
 
 class LoginDialog(wx.Dialog):
-    
+
     def __init__(self):
-        
-        super(LoginDialog, self).__init__(None, wx.ID_ANY, title='登录', size=(550, 320))
+        super(LoginDialog, self).__init__(None, wx.ID_ANY, title='登录', size=(550, 350))
+        # 初始化加密密钥
+        self.key = Fernet.generate_key()
+        self.cipher_suite = Fernet(self.key)
         # 初始化界面
         self.InitUI()
         # 窗口居中
         self.Center()
+        # 检查是否有保存的账号和密码
+        self.load_saved_credentials()
         
     def InitUI(self):
         
         # 控件
         logo_bm = wx.StaticBitmap(self, wx.ID_ANY, images.tee.GetBitmap())
         
-        sysname_lb = wx.StaticText(self, wx.ID_ANY, u"九龙监狱库房管理系统")
+        sysname_lb = wx.StaticText(self, wx.ID_ANY, u"拓建公司出入库管理系统")
         sysname_lb.SetFont(wx.Font(18, 70, 90, 92, False, wx.EmptyString))
         account_lb = wx.StaticText(self, wx.ID_ANY, u"账户：")
         password_lb = wx.StaticText(self, wx.ID_ANY, u"密码：")
@@ -38,7 +42,11 @@ class LoginDialog(wx.Dialog):
         self.account_tc.SetMaxLength(15)
         self.password_tc = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, size=(150, -1), style=wx.TE_PASSWORD)
         self.password_tc.SetMaxLength(15)
-        
+
+        self.save_password_cb = wx.CheckBox(self, wx.ID_ANY, "保存密码")
+        self.show_password_cb = wx.CheckBox(self, wx.ID_ANY, "显示密码")
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowPassword, self.show_password_cb)
+
         logon_btn = wx.Button(self, wx.ID_ANY, '登录')
         self.Bind(wx.EVT_BUTTON, self.OnLogin, logon_btn)
     
@@ -55,7 +63,9 @@ class LoginDialog(wx.Dialog):
         gbSizer.Add(self.account_tc, wx.GBPosition(2, 3), wx.GBSpan(1, 1), wx.ALL, 5)
         gbSizer.Add(password_lb, wx.GBPosition(3, 2), wx.GBSpan(1, 1), wx.ALL, 5)
         gbSizer.Add(self.password_tc, wx.GBPosition(3, 3), wx.GBSpan(1, 1), wx.ALL, 5)
-        gbSizer.Add(logon_btn, wx.GBPosition(4, 3), wx.GBSpan(1, 1), wx.ALL, 5)
+        gbSizer.Add(self.save_password_cb, wx.GBPosition(4, 2), wx.GBSpan(1, 1), wx.ALL, 5)
+        gbSizer.Add(self.show_password_cb, wx.GBPosition(4, 3), wx.GBSpan(1, 1), wx.ALL, 5)
+        gbSizer.Add(logon_btn, wx.GBPosition(5, 3), wx.GBSpan(1, 1), wx.ALL, 5)
         
         gbSizer.AddGrowableRow(4)
         
@@ -64,6 +74,17 @@ class LoginDialog(wx.Dialog):
 
         self.SetSizer(bSizer)
 
+    def OnShowPassword(self, evt):
+
+        current_password = self.password_tc.GetValue()
+        if self.show_password_cb.IsChecked():
+            self.password_tc.SetWindowStyleFlag(self.password_tc.GetWindowStyleFlag() & ~wx.TE_PASSWORD)
+        else:
+            self.password_tc.SetWindowStyleFlag(self.password_tc.GetWindowStyleFlag() | wx.TE_PASSWORD)
+
+        self.password_tc.SetValue(current_password)
+        self.password_tc.Refresh()
+        self.Layout()
     def OnLogin(self, evt):
 
 
@@ -81,6 +102,14 @@ class LoginDialog(wx.Dialog):
             return
         
         if userservice.auth(username, password) :
+            # 保存账号和密码
+            if self.save_password_cb.IsChecked():
+                self.save_credentials(username, password)
+
+            # 若未勾选保存密码，删除密码文件
+            if not self.save_password_cb.IsChecked():
+                if os.path.exists('credentials.txt'):
+                    os.remove('credentials.txt')
             self.Close(True)
             frm = MainFrame()
             frm.CenterOnScreen(direction=wx.BOTH)
@@ -96,3 +125,24 @@ class LoginDialog(wx.Dialog):
             dial = wx.MessageDialog(self,'自动备份失败，请联系管理员', '温馨提示', wx.OK)
             dial.ShowModal()
             dial.Destroy()
+
+    def save_credentials(self, username, password):
+        encrypted_username = self.cipher_suite.encrypt(username.encode())
+        encrypted_password = self.cipher_suite.encrypt(password.encode())
+        with open('credentials.txt', 'wb') as f:
+            f.write(self.key + b'\n')
+            f.write(encrypted_username + b'\n')
+            f.write(encrypted_password)
+
+    def load_saved_credentials(self):
+        if os.path.exists('credentials.txt'):
+            with open('credentials.txt', 'rb') as f:
+                key = f.readline().strip()
+                cipher_suite = Fernet(key)
+                encrypted_username = f.readline().strip()
+                encrypted_password = f.read().strip()
+                username = cipher_suite.decrypt(encrypted_username).decode()
+                password = cipher_suite.decrypt(encrypted_password).decode()
+                self.account_tc.SetValue(username)
+                self.password_tc.SetValue(password)
+                self.save_password_cb.SetValue(True)
