@@ -20,7 +20,7 @@ class MainFrame(wx.Frame):
 
     def __init__(self):
         super(MainFrame, self).__init__(None, wx.ID_ANY,
-                                          title='九龙监狱库房管理系统', size=(1200, 800),
+                                          title='拓建公司出入库管理系统', size=(1200, 800),
                                           style=wx.DEFAULT_FRAME_STYLE)
         sys.excepthook = MyExceptionHook
         # 工具栏
