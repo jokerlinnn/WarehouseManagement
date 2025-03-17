@@ -77,14 +77,30 @@ class LoginDialog(wx.Dialog):
     def OnShowPassword(self, evt):
 
         current_password = self.password_tc.GetValue()
-        if self.show_password_cb.IsChecked():
-            self.password_tc.SetWindowStyleFlag(self.password_tc.GetWindowStyleFlag() & ~wx.TE_PASSWORD)
-        else:
-            self.password_tc.SetWindowStyleFlag(self.password_tc.GetWindowStyleFlag() | wx.TE_PASSWORD)
+        sizer = self.password_tc.GetContainingSizer()
+        item = sizer.GetItem(self.password_tc)  # 获取 SizerItem 对象
+        if item:
+            pos = item.GetPos()
+            span = item.GetSpan()  # 获取跨度
+            flag = item.GetFlag()  # 从 SizerItem 对象中获取标志
+            border = item.GetBorder()  # 获取边框值
 
-        self.password_tc.SetValue(current_password)
-        self.password_tc.Refresh()
-        self.Layout()
+            # 移除原密码输入框
+            sizer.Detach(self.password_tc)
+            self.password_tc.Destroy()
+
+            if self.show_password_cb.IsChecked():
+                # 创建新的明文输入框
+                self.password_tc = wx.TextCtrl(self, wx.ID_ANY, current_password, size=(150, -1))
+            else:
+                # 创建新的密码输入框
+                self.password_tc = wx.TextCtrl(self, wx.ID_ANY, current_password, size=(150, -1), style=wx.TE_PASSWORD)
+
+            # 将新输入框添加到布局中，使用获取的边框值
+            sizer.Add(self.password_tc, pos=pos, span=span, flag=flag, border=border)
+            self.Layout()
+
+
     def OnLogin(self, evt):
 
 
