@@ -54,10 +54,10 @@ class GoodsTreeCtrlPanel(wx.Panel):
                          lambda e: self.filter.SetValue(''))
 
         searchMenu = wx.Menu()
-        searchMenu.AppendRadioItem(-1, "物品名称")
+        name_search = searchMenu.AppendRadioItem(-1, "物品名称")
         barcode_search = searchMenu.AppendRadioItem(-1, "条码")
         # 设置条码查询为默认选中
-        searchMenu.Check(barcode_search.GetId(), True)
+        searchMenu.Check(name_search.GetId(), True)
 
         self.filter.SetMenu(searchMenu)
         self.filter.Bind(wx.EVT_MENU, self.OnSearchMenuSelect)
@@ -85,7 +85,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
 
         # 当前选中的物品
         self.currentItem = None
-        self.current_search_type = 1
+        self.current_search_type = 0
         # 加载数据库物品信息
         self.goods_data = self.queryGoodsData()
         self.RecreateTree()
@@ -138,7 +138,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
             #self.GetParent().Thaw()
 
 
-    def RecreateTree(self, evt=None, current=None):
+    def RecreateTree0(self, evt=None, current=None):
         expansionState = self.tree.GetExpansionState()
 
         self.tree.Freeze()
@@ -279,11 +279,165 @@ class GoodsTreeCtrlPanel(wx.Panel):
         self.tree.Thaw()
 
 
+    def RecreateTree(self, evt=None, current=None):
+        expansionState = self.tree.GetExpansionState()
 
+        self.tree.Freeze()
+        self.tree.DeleteAllItems()
+        self.root = self.tree.AddRoot("物品概览")
+        self.tree.SetItemImage(self.root, 0)
+        self.tree.SetItemData(self.root, (-1, None))
+
+        treeFont = self.tree.GetFont()
+        catFont = self.tree.GetFont()
+
+        treeFont.SetWeight(wx.FONTWEIGHT_BOLD)
+        catFont.SetWeight(wx.FONTWEIGHT_BOLD)
+        self.tree.SetItemFont(self.root, treeFont)
+
+        # 第一个子节点
+        firstChild = None
+        # 当前选中的节点
+        selectedItem = None
+        if current is None and self.currentItem is not None:
+            current = self.tree.GetItemText(self.currentItem)
+        # 过滤条件
+        filterValue = self.filter.GetValue()
+        count = 0
+        all_matched_goods = []  # 用于存储所有匹配的物品信息
+
+        if self.current_search_type == 0:  # 物品名称查询
+            filterValue = self.filter.GetValue()
+            if filterValue:
+                # 用于存储包含搜索物品的类别
+                valid_categories = {}
+                for category, items in self.goods_data.items():
+                    filtered_items = [item for item in items if filterValue.lower() in item[0].lower()]
+                    if filtered_items:
+                        valid_categories[category] = filtered_items
+
+                for category, items in valid_categories.items():
+                    catagory_name, catagory_id = category
+                    count += 1
+                    child = self.tree.AppendItem(self.root, catagory_name, image=count)
+                    self.tree.SetItemFont(child, catFont)
+                    self.tree.SetItemData(child, (catagory_id, None))
+
+                    if current and current == catagory_name:
+                        selectedItem = child
+
+                    if not firstChild:
+                        firstChild = child
+
+                    for childItem in items:
+                        image = count % len(images.catalog)
+                        goods_name, goods_id = childItem
+                        goodsItem = self.tree.AppendItem(child, goods_name, image=image)
+                        self.tree.SetItemData(goodsItem, (catagory_id, goods_id))
+                        all_matched_goods.append((goods_name, goods_id))  # 存储匹配的物品信息
+
+                        if current and current == goods_name:
+                            selectedItem = goodsItem
+            else:
+                # 没有输入搜索值，显示所有物品
+                for category, items in self.goods_data.items():
+                    catagory_name, catagory_id = category
+                    count += 1
+                    child = self.tree.AppendItem(self.root, catagory_name, image=count)
+                    self.tree.SetItemFont(child, catFont)
+                    self.tree.SetItemData(child, (catagory_id, None))
+
+                    if current and current == catagory_name:
+                        selectedItem = child
+
+                    if not firstChild:
+                        firstChild = child
+
+                    for childItem in items:
+                        image = count % len(images.catalog)
+                        goods_name, goods_id = childItem
+                        goodsItem = self.tree.AppendItem(child, goods_name, image=image)
+                        self.tree.SetItemData(goodsItem, (catagory_id, goods_id))
+                        all_matched_goods.append((goods_name, goods_id))  # 存储匹配的物品信息
+
+                        if current and current == goods_name:
+                            selectedItem = goodsItem
+        elif self.current_search_type == 1:  # 条码查询
+            filterValue = self.filter.GetValue()
+            if filterValue:
+                goods_infos = goodsservice.get_goods_by_barcode(filterValue)
+                for goods_info in goods_infos:
+                    catagory_name = goods_info['CATAGORY_NAME']
+                    catagory_id = goods_info['CATAGORY_ID']
+                    goods_name = goods_info['GOODS_NAME']
+                    goods_id = goods_info['ID']
+
+                    # 检查类别节点是否已存在
+                    category_item = None
+                    child, cookie = self.tree.GetFirstChild(self.root)
+                    while child.IsOk():
+                        if self.tree.GetItemText(child) == catagory_name:
+                            category_item = child
+                            break
+                        child = self.tree.GetNextSibling(child)
+
+                    if not category_item:
+                        category_item = self.tree.AppendItem(self.root, catagory_name, image=1)
+                        self.tree.SetItemFont(category_item, catFont)
+                        self.tree.SetItemData(category_item, (catagory_id, None))
+
+                    goodsItem = self.tree.AppendItem(category_item, goods_name, image=0)
+                    self.tree.SetItemData(goodsItem, (catagory_id, goods_id))
+                    all_matched_goods.append((goods_name, goods_id))  # 存储匹配的物品信息
+
+                    if current and current == goods_name:
+                        selectedItem = goodsItem
+            else:
+                # 条码输入框为空，展示所有物品
+                count = 0
+                for category, items in self.goods_data.items():
+                    catagory_name, catagory_id = category
+                    count += 1
+                    child = self.tree.AppendItem(self.root, catagory_name, image=count)
+                    self.tree.SetItemFont(child, catFont)
+                    self.tree.SetItemData(child, (catagory_id, None))
+
+                    if not firstChild:
+                        firstChild = child
+
+                    for childItem in items:
+                        image = count % len(images.catalog)
+                        goods_name, goods_id = childItem
+                        goodsItem = self.tree.AppendItem(child, goods_name, image=image)
+                        self.tree.SetItemData(goodsItem, (catagory_id, goods_id))
+                        all_matched_goods.append((goods_name, goods_id))  # 存储匹配的物品信息
+
+        self.tree.Expand(self.root)
+        if selectedItem is None and firstChild:
+            self.tree.Expand(firstChild)
+        if filterValue:
+            self.tree.ExpandAll()
+        elif expansionState:
+            self.tree.SetExpansionState(expansionState)
+        if selectedItem:
+            self.tree.SelectItem(selectedItem)
+
+        # 根据匹配的物品数量展示相应的物品信息
+        if all_matched_goods:
+            if len(all_matched_goods) == 1:
+                # 查询结果只有一件物品
+                _, goods_id = all_matched_goods[0]
+            else:
+                # 查询结果有多件物品，选择第一件
+                _, goods_id = all_matched_goods[0]
+            goodsinfo = goodsservice.get_goods(goods_id)
+            model.goodsDeatilModel.set(goodsinfo)
+
+        self.tree.Thaw()
     def OnUpdate(self, m):
         self.goods_data = self.queryGoodsData()
         self.RecreateTree(current=m.current)
-        
+
     def OnRightDown(self,evt):
         pt = evt.GetPosition();
         #item, flags = self.tree.HitTest(pt)
@@ -291,7 +445,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
         if item:
             self.tree.SelectItem(item)
             self.currentItem = item
-    
+
     def OnRightUp(self,evt):
         pt = evt.GetPosition();
         #item, flags = self.tree.HitTest(pt)
@@ -310,7 +464,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
                     menu.Enable(item2.GetId(), False)
                 self.PopupMenu(menu)
                 menu.Destroy()
-        
+
     def OnItemEdit(self,evt):
         item = self.currentItem
         catagory_id, goods_id = self.tree.GetItemData(item)
@@ -325,7 +479,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
             dlg.InitCtrlValue(goods_id)
             dlg.CenterOnParent(dir=wx.BOTH)
             dlg.ShowModal()
-        
+
     def OnItemDelete(self,evt):
         strs = "确定要删除[" + self.tree.GetItemText(self.currentItem) + "]吗?删除后将不可恢复"
         dlg = wx.MessageDialog(None, strs, '温馨提示', wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_QUESTION)
@@ -342,7 +496,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
             catagoryservice.delete_catagory(catagory_id)
         else:
             goodsservice.delete_goods(goods_id)
-            
+
         self.tree.DeleteChildren(self.currentItem)
         self.tree.Delete(self.currentItem)
         self.currentItem = None
