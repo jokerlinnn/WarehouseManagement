@@ -21,6 +21,10 @@ OP_UPDATE = 'update'
 OP_DELETE = 'delete'
 OP_SELECT = 'select'
 
+try:
+    os.mkdir('config')
+except:
+    pass
 _config = {}
 
 # 字典工程，指定sqlite3返回字典形式数据
@@ -172,7 +176,7 @@ def count(sql, params=None):
     return row[0]
 
 
-DB_FILE_PATH = 'WarehouseManagement.db'
+DB_FILE_PATH = 'config/WarehouseManagement.db'
 INIT_DB_SCRIPTS = '''
     DROP TABLE IF EXISTS USERS;
     DROP TABLE IF EXISTS CATAGORY;
@@ -262,7 +266,7 @@ def jugement(num):
                 print('输入的参数有误')
 def Get_in_out_price(GOOD_NAME):
     # 1.硬盘上创建连接
-    con = sqlite3.connect('WarehouseManagement.db')
+    con = sqlite3.connect('config/WarehouseManagement.db')
     # 获取cursor对象
     cur = con.cursor()
     # 执行sql创建表
