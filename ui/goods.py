@@ -124,6 +124,12 @@ class AddorEditGoodsDialog(wx.Dialog):
         if barcode == '':
             self.info.ShowMessage('条形码不能为空！', flags=wx.ICON_WARNING)
             return
+
+        if goodsservice.exists(goods_name, barcode, self.goods_id):
+            msg = '[{}] 物品名称或条形码已存在，请重新输入!'.format(goods_name)
+            self.info.ShowMessage(msg, wx.ICON_WARNING)
+            return
+
         goods_unit = self.tc_goodsUnit.GetValue().strip()
         if goods_unit == '':
             self.info.ShowMessage('物品规格不能为空！', flags=wx.ICON_WARNING)
