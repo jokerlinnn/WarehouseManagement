@@ -1,8 +1,8 @@
 import db
 
-def exists(goods_name, goods_id=-1):
-    sql = '''select count(1) from goods where goods_name = :goods_name and id != :goods_id'''
-    return db.count(sql, (goods_name, goods_id))
+def exists(goods_name, barcode, goods_id=-1):
+    sql = '''select count(1) from goods where (goods_name = :goods_name or barcode = :barcode) and id != :goods_id'''
+    return db.count(sql, (goods_name, barcode, goods_id))
 
 def add_or_update_goods(goods_dict: dict):
     update_sql = '''update goods set goods_name =:goods_name, goods_order=:goods_order, \
