@@ -124,8 +124,8 @@ class LoginDialog(wx.Dialog):
 
             # 若未勾选保存密码，删除密码文件
             if not self.save_password_cb.IsChecked():
-                if os.path.exists('credentials.txt'):
-                    os.remove('credentials.txt')
+                if os.path.exists('config/credentials.txt'):
+                    os.remove('config/credentials.txt')
             self.Close(True)
             frm = MainFrame()
             frm.CenterOnScreen(direction=wx.BOTH)
@@ -145,14 +145,14 @@ class LoginDialog(wx.Dialog):
     def save_credentials(self, username, password):
         encrypted_username = self.cipher_suite.encrypt(username.encode())
         encrypted_password = self.cipher_suite.encrypt(password.encode())
-        with open('credentials.txt', 'wb') as f:
+        with open('config/credentials.txt', 'wb') as f:
             f.write(self.key + b'\n')
             f.write(encrypted_username + b'\n')
             f.write(encrypted_password)
 
     def load_saved_credentials(self):
-        if os.path.exists('credentials.txt'):
-            with open('credentials.txt', 'rb') as f:
+        if os.path.exists('config/credentials.txt'):
+            with open('config/credentials.txt', 'rb') as f:
                 key = f.readline().strip()
                 cipher_suite = Fernet(key)
                 encrypted_username = f.readline().strip()
