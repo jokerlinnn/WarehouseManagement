@@ -1,5 +1,5 @@
 import wx
-
+import time
 from wx.lib.mixins.treemixin import ExpansionState
 import wx.lib.mixins.listctrl as listmix
 import images
@@ -7,7 +7,7 @@ import wx.adv
 import wx.lib.buttons as buttons
 import wx.grid as gridlib
 import re
-
+from dtpweb import DTPWeb
 import db
 import os
 from collections import OrderedDict
@@ -37,6 +37,90 @@ class GoodsTreeCtrl(ExpansionState, wx.TreeCtrl):
             imgList.Add(png.GetBitmap())
 
         self.AssignImageList(imgList)
+
+# 打印函数
+def print_function(stock_name,barcode,number):
+    '''
+    stock_name:  物品名称
+    barcode: 商品条码
+    number: 打印数量
+    '''
+    ##初始化打印机
+    api = DTPWeb()
+    api.check_plugin()
+
+    printers = api.get_printers()
+    if len(printers) == 0:
+        wx.MessageBox("未检测到打印机,请检查USB线是否正确连接,驱动是否正确安装", "错误", wx.OK | wx.ICON_ERROR)
+        return None
+    label_width = 50    ##标签纸宽度
+    label_height = 30   ##标签纸高度
+    text_height = 4     ##条形码下面的数字高度
+    # 打开打印机
+    if api.open_printer(**printers[0]):
+        for i in range(number):
+            # 创建打印任务，指定标签纸大小。
+            api.start_job(label_width, label_height)
+
+            # 绘制字符串
+            api.draw_text(stock_name,4,3)       ##物品名称   绘制字符串在标签纸上的x y的位置
+            # 绘制一维码，一维码下面的字符串拉伸显示
+            api.draw_barcode(barcode, 0, 10, 50,20, text_height)    ##条形码数据   绘制条形码在标签纸上的x y的位置   条形码的高度  条形码下面数字的高度
+            # 提交打印任务，开始打印
+            api.commit_job()
+            time.sleep(2)
+    else:
+        wx.MessageBox("打印机链接失败,请检查USB线是否正确连接,驱动是否正确安装", "错误", wx.OK | wx.ICON_ERROR)
+        return None
+    # 关闭打印机
+    api.close_printer()
+
+class PrintDialog(wx.Dialog):
+    def __init__(self, parent, goods_name, barcode):
+        super().__init__(parent, title="打印条形码")
+
+        panel = wx.Panel(self)
+
+        # 创建静态文本和文本框
+        goods_name_label = wx.StaticText(panel, label="物品名称:")
+        self.goods_name_text = wx.TextCtrl(panel, value=goods_name, style=wx.TE_READONLY)
+
+        barcode_label = wx.StaticText(panel, label="物品条形码:")
+        self.barcode_text = wx.TextCtrl(panel, value=barcode, style=wx.TE_READONLY)
+
+        print_count_label = wx.StaticText(panel, label="打印数量:")
+        self.print_count_text = wx.TextCtrl(panel)
+
+        # 创建打印按钮
+        print_button = wx.Button(panel, label="打印")
+        print_button.Bind(wx.EVT_BUTTON, self.on_print)
+
+        # 创建布局
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        grid_sizer = wx.FlexGridSizer(3, 2, 5, 5)
+        grid_sizer.Add(goods_name_label, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        grid_sizer.Add(self.goods_name_text, 0, wx.EXPAND)
+        grid_sizer.Add(barcode_label, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        grid_sizer.Add(self.barcode_text, 0, wx.EXPAND)
+        grid_sizer.Add(print_count_label, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        grid_sizer.Add(self.print_count_text, 0, wx.EXPAND)
+
+        sizer.Add(grid_sizer, 0, wx.ALL | wx.EXPAND, 10)
+        sizer.Add(print_button, 0, wx.ALIGN_CENTER | wx.BOTTOM, 10)
+
+        panel.SetSizer(sizer)
+        sizer.Fit(self)
+
+    def on_print(self, event):
+        goods_name = self.goods_name_text.GetValue()
+        barcode = self.barcode_text.GetValue()
+        print_count = self.print_count_text.GetValue()
+
+        if print_count.isdigit():
+            print_function(goods_name, barcode, int(print_count))
+            self.Close()
+        else:
+            wx.MessageBox("打印数量必须为数字", "错误", wx.OK | wx.ICON_ERROR)
 
 
 class GoodsTreeCtrlPanel(wx.Panel):
@@ -298,7 +382,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
         self.RecreateTree(current=m.current)
 
     def OnRightDown(self,evt):
-        pt = evt.GetPosition();
+        pt = evt.GetPosition()
         #item, flags = self.tree.HitTest(pt)
         item = self.tree.HitTest(pt)[0]
         if item:
@@ -306,7 +390,7 @@ class GoodsTreeCtrlPanel(wx.Panel):
             self.currentItem = item
 
     def OnRightUp(self,evt):
-        pt = evt.GetPosition();
+        pt = evt.GetPosition()
         #item, flags = self.tree.HitTest(pt)
         item = self.tree.HitTest(pt)[0]
         if item:
@@ -315,8 +399,10 @@ class GoodsTreeCtrlPanel(wx.Panel):
                 menu = wx.Menu()
                 item1 = menu.Append(wx.ID_ANY, "编辑")
                 item2 = menu.Append(wx.ID_ANY, "删除")
+                item3 = menu.Append(wx.ID_ANY, "打印")
                 self.Bind(wx.EVT_MENU, self.OnItemEdit, item1)
                 self.Bind(wx.EVT_MENU, self.OnItemDelete, item2)
+                self.Bind(wx.EVT_MENU, self.OnItemPrint, item3)
                 # 禁止删除非空的物品类别节点
                 childrencount = self.tree.GetChildrenCount(item, recursively=True)
                 if childrencount > 0:
@@ -338,6 +424,23 @@ class GoodsTreeCtrlPanel(wx.Panel):
             dlg.InitCtrlValue(goods_id)
             dlg.CenterOnParent(dir=wx.BOTH)
             dlg.ShowModal()
+
+    def OnItemPrint(self, evt):
+        # 获取物品名称和条形码
+        item = self.currentItem
+        catagory_id, goods_id = self.tree.GetItemData(item)
+        if goods_id is not None:
+            goods = goodsservice.get_goods(goods_id)
+            goods_name = goods.get('GOODS_NAME', '')
+            barcode = goods.get('BARCODE', '')
+
+            # 弹出打印对话框
+            dlg = PrintDialog(self, goods_name, barcode)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            wx.MessageBox("请选择具体的物品", "提示", wx.OK | wx.ICON_INFORMATION)
+
 
     def OnItemDelete(self,evt):
         strs = "确定要删除[" + self.tree.GetItemText(self.currentItem) + "]吗?删除后将不可恢复"
