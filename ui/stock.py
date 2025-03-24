@@ -494,7 +494,7 @@ class StockRegisterPanel(wx.Panel):
         # self.tc_goodsNum.SetMin(1)
         # self.tc_goodsNum.SetNoneAllowed(True)
         # self.tc_goodsNum.SetValue(None)
-        self.tc_goodsNum = wx.TextCtrl(self, wx.ID_ANY, '', )
+        self.tc_goodsNum = wx.TextCtrl(self, wx.ID_ANY, '',style=wx.TE_READONLY)
         self.tc_goodsNum.SetMaxLength(12)
         gbSizer.Add(label, (0, 2), (1, 1),  wx.ALL | wx.ALIGN_RIGHT,  5)
         gbSizer.Add(self.tc_goodsNum, (0, 3), (1, 1), wx.ALL | wx.EXPAND, 5)
@@ -514,19 +514,19 @@ class StockRegisterPanel(wx.Panel):
 
         label = wx.StaticText(self, wx.ID_ANY, '规格：')
         self.tc_goodsunit = wx.TextCtrl(
-            self, wx.ID_ANY, '', )
+            self, wx.ID_ANY, '',style=wx.TE_READONLY)
         self.tc_goodsunit.SetMaxLength(6)
         gbSizer.Add(label, (4, 0), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
         gbSizer.Add(self.tc_goodsunit, (4, 1), (1, 1), wx.ALL | wx.EXPAND, 5)
 
         label = wx.StaticText(self, wx.ID_ANY, '经办地点：')
-        self.tc_address = wx.TextCtrl(self, wx.ID_ANY, '')
+        self.tc_address = wx.TextCtrl(self, wx.ID_ANY, '',style=wx.TE_READONLY)
         self.tc_address.SetMaxLength(24)
         gbSizer.Add(label, (4, 2), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
         gbSizer.Add(self.tc_address, (4, 3), (1, 1), wx.ALL | wx.EXPAND, 5)
 
         label = wx.StaticText(self, wx.ID_ANY, '物品单价：')
-        self.tc_goodsprice = wx.TextCtrl(self, wx.ID_ANY, '', )
+        self.tc_goodsprice = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_READONLY)
         self.tc_goodsprice.SetMaxLength(12)
         self.tc_goodsprice.Bind(wx.EVT_CHAR, self.OnFloatChar)
         gbSizer.Add(label, (1, 2), (1, 1), wx.ALL, 5)
