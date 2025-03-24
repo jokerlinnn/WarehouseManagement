@@ -547,11 +547,6 @@ class StockRegisterPanel(wx.Panel):
         gbSizer.Add(label, (2, 2), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
         gbSizer.Add(self.tc_totalamount, (2, 3), (1, 1), wx.ALL | wx.EXPAND, 5)
 
-        # label = wx.StaticText(self, wx.ID_ANY, '总计：')
-        # self.tc_totalamounts = wx.TextCtrl(
-        #     self, wx.ID_ANY, '', style=wx.TE_READONLY)
-        # gbSizer.Add(label, (3, 0), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
-        # gbSizer.Add(self.tc_totalamounts, (3, 1), (1, 1), wx.ALL | wx.EXPAND, 5)
 
         label = wx.StaticText(self, wx.ID_ANY, '库存：')
         self.tc_currentinventory = wx.TextCtrl(
