@@ -11,4 +11,4 @@ python bootstrap.py
 ```
 默认登录用户和密码均为sysadmin
 
-test
+test2222
