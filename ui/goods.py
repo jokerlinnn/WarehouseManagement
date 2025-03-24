@@ -93,14 +93,14 @@ class AddorEditGoodsDialog(wx.Dialog):
         self.tc_order.Bind(wx.EVT_CHAR, self.OnIntegerChar)
         self.tc_goodsPrice.Bind(wx.EVT_CHAR, self.OnFloatChar)
         
-        self.goods_id = -1;
+        self.goods_id = -1
         self.msg =  '添加物品成功!'
 
     def InitListBoxData(self):
         catagories = catagoryservice.get_all_catagories()
         if catagories : 
             for row in catagories:
-                self.catagory_lb.Append(row['CATAGORY_NAME'],   row['ID']);
+                self.catagory_lb.Append(row['CATAGORY_NAME'],   row['ID'])
     
             self.catagory_lb.SetSelection(0)
         else:
@@ -112,7 +112,7 @@ class AddorEditGoodsDialog(wx.Dialog):
         # -----------------校验输入值start------------------------------
         goods_name = self.tc_goodsName.GetValue().strip()
         if goods_name == '':
-            self.info.ShowMessage('物品名称不能为空', flags=wx.ICON_WARNING);
+            self.info.ShowMessage('物品名称不能为空', flags=wx.ICON_WARNING)
             return 
         if goodsservice.exists(goods_name, self.goods_id):
             msg = '[{}]该物品已经存在，请重新输入!'.format(goods_name)
