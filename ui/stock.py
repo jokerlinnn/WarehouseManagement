@@ -573,6 +573,7 @@ class StockRegisterPanel(wx.Panel):
         gbSizer.Add(label, (6, 0), (1, 1), wx.ALL | wx.ALIGN_RIGHT, 5)
         gbSizer.Add(self.tc_barcode, (6, 1), (1, 1), wx.ALL | wx.EXPAND, 5)
 
+
         gbSizer.AddGrowableCol(1)
         gbSizer.AddGrowableCol(3)
 
@@ -629,13 +630,13 @@ class StockRegisterPanel(wx.Panel):
         cBtn = wx.ContextHelpButton(self)
         cBtn.SetHelpText("默认显示当天登记的记录，并且可以对记录进行删除和修改操作。")
         bs4.Add(cBtn, 0, wx.ALL | wx.EXPAND, 5)
-        
+
         bs5 = wx.BoxSizer(wx.VERTICAL)
         self.list = SockListCtrl(self, -1, style=wx.LC_REPORT | wx.LC_SINGLE_SEL| wx.BORDER_NONE| wx.LC_HRULES | wx.LC_VRULES)
         self.list.Bind(wx.EVT_COMMAND_RIGHT_CLICK, self.OnRightClick)
         #self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated, self.list)
         #self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected, self.list)
-        
+
         bs5.Add(self.list, 1, wx.ALL | wx.EXPAND, 5)
 
         sizer.Add(bs4, 0, wx.ALL | wx.EXPAND, 5)
@@ -648,14 +649,17 @@ class StockRegisterPanel(wx.Panel):
         
         model.goodsDeatilModel.addListener(self.OnUpdate)
         self.queryStocksByDate()
-    
+
+
+
+
     def queryStocksByDate(self):
         registerDate = self.registerDate.GetValue().Format('%Y-%m-%d')
         goodsName = self.s_goodsname.GetValue().strip()
         result = stockservice.get_stocks({
                 'goods_name': goodsName,
                 'startdate': registerDate
-            });
+            })
         self.setData(result)
     
     def OnDateChanged(self, evt):
@@ -712,7 +716,7 @@ class StockRegisterPanel(wx.Panel):
     def OnInStock(self, evt):
         self.SaveStock(1)
         
-    def OnOutStock(self, evt):
+    def OnOutStock0(self, evt):
         try:
             goods_num = Fraction(self.tc_goodsNum.GetValue())
         except:
@@ -727,6 +731,64 @@ class StockRegisterPanel(wx.Panel):
             dial.Destroy()
             return ''
         self.SaveStock(0)
+
+    def OnOutStock(self, evt):
+        # 创建一个输入对话框
+        dlg = wx.TextEntryDialog(self, "请输入商品条形码", "出库 - 输入条形码", style=wx.OK | wx.CANCEL)
+
+        # 尝试获取剪贴板内容
+        clipboard = wx.Clipboard.Get()
+        if clipboard.Open():
+            if clipboard.IsSupported(wx.DataFormat(wx.DF_TEXT)):
+                text_data = wx.TextDataObject()
+                if clipboard.GetData(text_data):
+                    barcode = text_data.GetText()
+                    dlg.SetValue(barcode)
+            clipboard.Close()
+
+        # 居中显示对话框
+        dlg.CenterOnParent()
+
+        # 显示对话框并获取用户输入
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            barcode = dlg.GetValue().strip()
+            if barcode:
+                # 根据条形码查找商品信息
+                goods_list = goodsservice.get_goods_by_barcode(barcode)
+                if goods_list:
+                    goods = goods_list[0]
+                    goods_name = goods['GOODS_NAME']
+                    barcode = goods.get('BARCODE', '')
+                    goods_num_in, goods_num_out, Total_price_of_goods = db.Get_in_out_price(goods_name)
+                    current_inventory = goods_num_in - goods_num_out
+
+                    # 检查列表中是否已经存在该物品
+                    item_index = -1
+                    for i in range(self.list.GetItemCount()):
+                        if self.list.GetItemText(i, 1) == barcode:
+                            item_index = i
+                            break
+
+                    if item_index == -1:
+                        # 列表中不存在该物品，添加新行
+                        index = self.list.InsertItem(self.list.GetItemCount(), str(self.list.GetItemCount() + 1))
+                        self.list.SetItem(index, 1, barcode)
+                        self.list.SetItem(index, 2, goods_name)
+                        self.list.SetItem(index, 3, str(current_inventory))
+                        self.list.SetItem(index, 4, "1")
+                    else:
+                        # 列表中已存在该物品，增加减少库存的数量
+                        reduce_count = int(self.list.GetItemText(item_index, 4))
+                        self.list.SetItem(item_index, 4, str(reduce_count + 1))
+
+                    # 清空输入框
+                    dlg.SetValue("")
+                else:
+                    wx.MessageBox('未找到该条形码对应的商品信息，请检查输入！', '温馨提示', wx.OK | wx.ICON_WARNING)
+            else:
+                wx.MessageBox('条形码不能为空，请重新输入！', '温馨提示', wx.OK | wx.ICON_WARNING)
+        dlg.Destroy()
 
     def SaveStock(self, stock_type):
         if self.goodsId is None:
