@@ -716,7 +716,7 @@ class StockRegisterPanel(wx.Panel):
         self.out_stock_items = {}  # 用于存储出库物品信息
 
         # 创建二级页面
-        dlg = wx.Dialog(self, title="出库操作")
+        dlg = wx.Dialog(self, title="出库操作", size=(530, 300))
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 条形码输入框
