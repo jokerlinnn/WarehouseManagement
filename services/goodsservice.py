@@ -42,3 +42,9 @@ def get_goods_tree():
 def get_goods_by_barcode(barcode):
     sql = '''select a.*, b.catagory_name from goods a , catagory b where a.catagory_id = b.id and a.barcode LIKE ?'''
     return db.selectall(sql, ('%' + barcode + '%',), return_dict=True)
+
+# 新增精确查询方法
+def get_goods_by_barcode_exact(barcode):
+    sql = '''select a.*, b.catagory_name from goods a , catagory b where a.catagory_id = b.id and a.barcode = ?'''
+    return db.selectall(sql, (barcode,), return_dict=True)
+
