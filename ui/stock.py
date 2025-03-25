@@ -758,7 +758,7 @@ class StockRegisterPanel(wx.Panel):
                 return
 
             # 根据条形码查询物品信息
-            goods_info_list = goodsservice.get_goods_by_barcode(barcode)
+            goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
                 wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
                 return
