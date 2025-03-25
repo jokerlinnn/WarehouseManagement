@@ -709,7 +709,35 @@ class StockRegisterPanel(wx.Panel):
 
     def OnInStock(self, evt):
         self.SaveStock(1)
-        
+
+    def OnConfirmOutStock(self, event):
+        # 遍历out_stock_items执行出库
+        for barcode, (index, goods_name, current_stock, reduce_stock) in self.out_stock_items.items():
+            # 获取物品ID（需从goods_info中获取）
+            goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
+            goods_id = goods_info['ID']
+            stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
+
+            # 出库参数（stock_type需根据业务逻辑设置，如0表示出库）
+            params = {
+                'STOCK_TYPE': 0,
+                'STOCK_DATE': stock_date,
+                'GOODS_ID': goods_id,
+                'GOODS_NUM': str(reduce_stock),  # 减少的数量
+                'GOODS_UNIT': goods_info['GOODS_UNIT'],
+                'GOODS_PRICE': goods_info['GOODS_PRICE'],
+                'OP_PERSON': self.tc_op.GetValue(),  # 可从界面获取操作人
+                'OP_AREA': self.tc_address.GetValue()  # 可从界面获取地点
+            }
+
+            # 执行出库操作
+            stockservice.add_stock(params)
+
+        # 关闭对话框并刷新库存显示
+        event.GetEventObject().GetTopLevelParent().Close()
+
+        wx.MessageBox('更新库存成功', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+
 
     def OnOutStock(self, evt):
 
@@ -727,9 +755,15 @@ class StockRegisterPanel(wx.Panel):
         input_sizer.Add(barcode_input, 1, wx.ALL | wx.EXPAND, 5)
         sizer.Add(input_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
-        # 查询按钮
+        # 在创建按钮部分添加确定按钮
         query_button = wx.Button(dlg, label="查询")
-        sizer.Add(query_button, 0, wx.ALL | wx.ALIGN_CENTER, 5)
+        confirm_button = wx.Button(dlg, label="确定执行出库")  # 新增确定按钮
+
+        # 调整布局，将查询和确定按钮放在同一行
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer.Add(query_button, 0, wx.ALL, 5)
+        button_sizer.Add(confirm_button, 0, wx.ALL, 5)
+        sizer.Add(button_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 5)  # 替换原单独添加的query_button
 
         # 信息列表
         list_ctrl = wx.ListCtrl(dlg, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_NONE | wx.LC_HRULES | wx.LC_VRULES)
@@ -788,6 +822,7 @@ class StockRegisterPanel(wx.Panel):
                 self.out_stock_items[barcode] = (index, goods_name, current_stock, goods_num)
 
         query_button.Bind(wx.EVT_BUTTON, on_query)
+        confirm_button.Bind(wx.EVT_BUTTON, self.OnConfirmOutStock)  # 绑定事件
 
         dlg.SetSizer(sizer)
         dlg.CenterOnParent()
