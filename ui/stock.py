@@ -646,7 +646,9 @@ class StockRegisterPanel(wx.Panel):
         
         self.goodsId = None
         self.currentItem = None
-        
+        self.out_stock_items = {}  # 用于存储出库物品信息
+
+
         model.goodsDeatilModel.addListener(self.OnUpdate)
         self.queryStocksByDate()
 
@@ -683,14 +685,6 @@ class StockRegisterPanel(wx.Panel):
         self.PopupMenu(menu)
         menu.Destroy()
     
-#     def OnEdit(self, evt):
-#         if self.currentItem is not None:
-#             self.list.EditLabel(self.currentItem)
-#         else:
-#             wx.MessageBox('请选择一条记录', '温馨提示', wx.OK_DEFAULT|wx.ICON_WARNING)
-#         
-#     def OnItemSelected(self, event):
-#         self.list.OpenEditor(5, event.Index)
 
     def OnUpdate(self, m):
         self.tc_goodsname.SetValue(m.data['GOODS_NAME'])
@@ -716,80 +710,87 @@ class StockRegisterPanel(wx.Panel):
     def OnInStock(self, evt):
         self.SaveStock(1)
         
-    def OnOutStock0(self, evt):
-        try:
-            goods_num = Fraction(self.tc_goodsNum.GetValue())
-        except:
-            dial = wx.MessageDialog(self, '输入的商品数量有误，应为整数(1)或小数(1.2)或分数(1/12)'.format(self.currentinventory), '温馨提示',
-                                    wx.OK)
-            dial.ShowModal()
-            dial.Destroy()
-            return ''
-        if self.currentinventory < goods_num:
-            dial = wx.MessageDialog(self, '库存不足,当前库存为{}'.format(self.currentinventory), '温馨提示', wx.OK)
-            dial.ShowModal()
-            dial.Destroy()
-            return ''
-        self.SaveStock(0)
 
     def OnOutStock(self, evt):
-        # 创建一个输入对话框
-        dlg = wx.TextEntryDialog(self, "请输入商品条形码", "出库 - 输入条形码", style=wx.OK | wx.CANCEL)
+        # 创建二级页面
+        dlg = wx.Dialog(self, title="出库操作")
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # 尝试获取剪贴板内容
-        clipboard = wx.Clipboard.Get()
-        if clipboard.Open():
-            if clipboard.IsSupported(wx.DataFormat(wx.DF_TEXT)):
-                text_data = wx.TextDataObject()
-                if clipboard.GetData(text_data):
-                    barcode = text_data.GetText()
-                    dlg.SetValue(barcode)
-            clipboard.Close()
+        # 条形码输入框
+        barcode_label = wx.StaticText(dlg, label="条形码：")
+        barcode_input = wx.TextCtrl(dlg)
+        input_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        input_sizer.Add(barcode_label, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        input_sizer.Add(barcode_input, 1, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(input_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
-        # 居中显示对话框
-        dlg.CenterOnParent()
+        # 查询按钮
+        query_button = wx.Button(dlg, label="查询")
+        sizer.Add(query_button, 0, wx.ALL | wx.ALIGN_CENTER, 5)
 
-        # 显示对话框并获取用户输入
-        result = dlg.ShowModal()
-        if result == wx.ID_OK:
-            barcode = dlg.GetValue().strip()
-            if barcode:
-                # 根据条形码查找商品信息
-                goods_list = goodsservice.get_goods_by_barcode(barcode)
-                if goods_list:
-                    goods = goods_list[0]
-                    goods_name = goods['GOODS_NAME']
-                    barcode = goods.get('BARCODE', '')
-                    goods_num_in, goods_num_out, Total_price_of_goods = db.Get_in_out_price(goods_name)
-                    current_inventory = goods_num_in - goods_num_out
+        # 信息列表
+        list_ctrl = wx.ListCtrl(dlg, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_NONE | wx.LC_HRULES | wx.LC_VRULES)
+        list_ctrl.InsertColumn(0, "物品名称")
+        list_ctrl.InsertColumn(1, "条形码")
+        list_ctrl.InsertColumn(2, "当前库存")
+        list_ctrl.InsertColumn(3, "减少库存")
+        list_ctrl.SetColumnWidth(0, 150)
+        list_ctrl.SetColumnWidth(1, 150)
+        list_ctrl.SetColumnWidth(2, 100)
+        list_ctrl.SetColumnWidth(3, 100)
+        sizer.Add(list_ctrl, 1, wx.ALL | wx.EXPAND, 5)
 
-                    # 检查列表中是否已经存在该物品
-                    item_index = -1
-                    for i in range(self.list.GetItemCount()):
-                        if self.list.GetItemText(i, 1) == barcode:
-                            item_index = i
-                            break
+        def on_query(evt):
+            barcode = barcode_input.GetValue().strip()
+            if not barcode:
+                wx.MessageBox('请输入条形码!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+                return
 
-                    if item_index == -1:
-                        # 列表中不存在该物品，添加新行
-                        index = self.list.InsertItem(self.list.GetItemCount(), str(self.list.GetItemCount() + 1))
-                        self.list.SetItem(index, 1, barcode)
-                        self.list.SetItem(index, 2, goods_name)
-                        self.list.SetItem(index, 3, str(current_inventory))
-                        self.list.SetItem(index, 4, "1")
-                    else:
-                        # 列表中已存在该物品，增加减少库存的数量
-                        reduce_count = int(self.list.GetItemText(item_index, 4))
-                        self.list.SetItem(item_index, 4, str(reduce_count + 1))
+            try:
+                goods_num = Fraction(1)  # 每次减少库存默认为1
+            except:
+                dial = wx.MessageDialog(dlg, '输入的商品数量有误，应为整数(1)或小数(1.2)或分数(1/12)', '温馨提示', wx.OK)
+                dial.ShowModal()
+                dial.Destroy()
+                return
 
-                    # 清空输入框
-                    dlg.SetValue("")
-                else:
-                    wx.MessageBox('未找到该条形码对应的商品信息，请检查输入！', '温馨提示', wx.OK | wx.ICON_WARNING)
+            # 根据条形码查询物品信息
+            goods_info_list = goodsservice.get_goods_by_barcode(barcode)
+            if not goods_info_list:
+                wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+                return
+
+            goods_info = goods_info_list[0]  # 假设条形码唯一，取第一条记录
+            goods_name = goods_info['GOODS_NAME']
+            goods_id = goods_info['ID']
+            current_stock = goodsservice.get_goods_stock(goods_id)
+
+
+            if current_stock < goods_num:
+                dial = wx.MessageDialog(dlg, '库存不足,当前库存为{}'.format(current_stock), '温馨提示', wx.OK)
+                dial.ShowModal()
+                dial.Destroy()
+                return
+
+            if barcode in self.out_stock_items:
+                index, _, _, reduce_stock = self.out_stock_items[barcode]
+                print(index)
+                new_reduce_stock = reduce_stock + goods_num
+                list_ctrl.SetItem(index, 3, str(new_reduce_stock))
+                self.out_stock_items[barcode] = (index, goods_name, current_stock, new_reduce_stock)
             else:
-                wx.MessageBox('条形码不能为空，请重新输入！', '温馨提示', wx.OK | wx.ICON_WARNING)
-        dlg.Destroy()
+                index = list_ctrl.InsertItem(list_ctrl.GetItemCount(), goods_name)
+                list_ctrl.SetItem(index, 1, barcode)
+                list_ctrl.SetItem(index, 2, str(current_stock))
+                list_ctrl.SetItem(index, 3, str(goods_num))
+                self.out_stock_items[barcode] = (index, goods_name, current_stock, goods_num)
 
+        query_button.Bind(wx.EVT_BUTTON, on_query)
+
+        dlg.SetSizer(sizer)
+        dlg.CenterOnParent()
+        dlg.ShowModal()
+        dlg.Destroy()
     def SaveStock(self, stock_type):
         if self.goodsId is None:
             wx.MessageBox('请在左侧选择要登记的物品!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)

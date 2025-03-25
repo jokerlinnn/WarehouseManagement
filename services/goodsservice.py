@@ -1,5 +1,20 @@
 import db
 
+def get_goods_stock(goods_id):
+    # 入库数量
+    sql_goods_num_in = '''
+    select sum(cast(GOODS_NUM as real)) from STOCK where GOODS_ID = ? and STOCK_TYPE = 1
+    '''
+    goods_num_in = db.selectone(sql_goods_num_in, (goods_id,))[0] or 0
+
+    # 出库数量
+    sql_goods_num_out = '''
+    select sum(cast(GOODS_NUM as real)) from STOCK where GOODS_ID = ? and STOCK_TYPE = 0
+    '''
+    goods_num_out = db.selectone(sql_goods_num_out, (goods_id,))[0] or 0
+
+    return goods_num_in - goods_num_out
+
 def exists(goods_name, barcode, goods_id=-1):
     sql = '''select count(1) from goods where (goods_name = :goods_name or barcode = :barcode) and id != :goods_id'''
     return db.count(sql, (goods_name, barcode, goods_id))
