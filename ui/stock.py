@@ -646,7 +646,7 @@ class StockRegisterPanel(wx.Panel):
         
         self.goodsId = None
         self.currentItem = None
-        self.out_stock_items = {}  # 用于存储出库物品信息
+
 
 
         model.goodsDeatilModel.addListener(self.OnUpdate)
@@ -712,6 +712,9 @@ class StockRegisterPanel(wx.Panel):
         
 
     def OnOutStock(self, evt):
+
+        self.out_stock_items = {}  # 用于存储出库物品信息
+
         # 创建二级页面
         dlg = wx.Dialog(self, title="出库操作")
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -774,7 +777,6 @@ class StockRegisterPanel(wx.Panel):
 
             if barcode in self.out_stock_items:
                 index, _, _, reduce_stock = self.out_stock_items[barcode]
-                print(index)
                 new_reduce_stock = reduce_stock + goods_num
                 list_ctrl.SetItem(index, 3, str(new_reduce_stock))
                 self.out_stock_items[barcode] = (index, goods_name, current_stock, new_reduce_stock)
