@@ -585,12 +585,12 @@ class StockRegisterPanel(wx.Panel):
         b = buttons.GenButton(self, -1, "出库")
         self.Bind(wx.EVT_BUTTON, self.OnOutStock, b)
         bs2.Add(b, 0, wx.ALL, 5)
-        b = buttons.GenButton(self, -1, "重置")
-        self.Bind(wx.EVT_BUTTON, self.OnReset, b)
-        bs2.Add(b, 0, wx.ALL, 5)
-        b = buttons.GenButton(self, -1, "计算合计")
-        self.Bind(wx.EVT_BUTTON, self.OnCalculate, b)
-        bs2.Add(b, 0, wx.ALL, 5)
+        # b = buttons.GenButton(self, -1, "重置")
+        # self.Bind(wx.EVT_BUTTON, self.OnReset, b)
+        # bs2.Add(b, 0, wx.ALL, 5)
+        # b = buttons.GenButton(self, -1, "计算合计")
+        # self.Bind(wx.EVT_BUTTON, self.OnCalculate, b)
+        # bs2.Add(b, 0, wx.ALL, 5)
         bs2.AddStretchSpacer(1)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -788,7 +788,7 @@ class StockRegisterPanel(wx.Panel):
             goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
                 wx.MessageBox('未找到该条形码', '提示', wx.OK)
-                winsound.Beep(1000, 500)
+                winsound.Beep(2000, 800)
                 ##这里需要添加错误提示音
                 return
 
@@ -918,7 +918,7 @@ class StockRegisterPanel(wx.Panel):
             if not goods_info_list:
                 wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
                 ##这里需要添加错误提示音
-                winsound.Beep(1000, 500)
+                winsound.Beep(2000, 800)
                 return
 
             goods_info = goods_info_list[0]  # 假设条形码唯一，取第一条记录
