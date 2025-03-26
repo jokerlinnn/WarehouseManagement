@@ -733,8 +733,10 @@ class StockRegisterPanel(wx.Panel):
             # 执行出库操作
             stockservice.add_stock(params)
 
+
         # 关闭对话框并刷新库存显示
         event.GetEventObject().GetTopLevelParent().Close()
+        self.queryStocksByDate()
 
         wx.MessageBox('更新库存成功', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
 
@@ -761,8 +763,8 @@ class StockRegisterPanel(wx.Panel):
 
             stockservice.add_stock(params)  # 执行入库操作
 
-        # 关闭对话框并刷新界面
         event.GetEventObject().GetTopLevelParent().Close()
+        self.queryStocksByDate()
         wx.MessageBox('入库操作完成', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
 
     def OnInStock(self, evt):
@@ -787,9 +789,8 @@ class StockRegisterPanel(wx.Panel):
 
             goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
-                wx.MessageBox('未找到该条形码', '提示', wx.OK)
                 winsound.Beep(2000, 800)
-                ##这里需要添加错误提示音
+                wx.MessageBox('未找到该条形码', '提示', wx.OK)
                 return
 
             goods_info = goods_info_list[0]
@@ -916,9 +917,8 @@ class StockRegisterPanel(wx.Panel):
             # 根据条形码查询物品信息
             goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
-                wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
-                ##这里需要添加错误提示音
                 winsound.Beep(2000, 800)
+                wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
                 return
 
             goods_info = goods_info_list[0]  # 假设条形码唯一，取第一条记录
