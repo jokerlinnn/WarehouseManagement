@@ -3,7 +3,7 @@ import re
 import utils
 import model
 from services import catagoryservice, goodsservice
-
+import random
 
 class AddorEditGoodsDialog(wx.Dialog):
 
@@ -27,6 +27,10 @@ class AddorEditGoodsDialog(wx.Dialog):
 
         self.tc_barcode = wx.TextCtrl(self, wx.ID_ANY, '')
         self.tc_barcode.SetMaxLength(20)  # 可根据实际情况调整长度
+
+        ##随机生成条形码
+        init_tc_barcode = ''.join([str(random.randint(0, 9)) for _ in range(13)])
+        self.tc_barcode.SetValue(init_tc_barcode)
 
 
 
