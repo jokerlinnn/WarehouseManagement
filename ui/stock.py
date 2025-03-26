@@ -15,7 +15,7 @@ from ui.catagory import AddorEditCatagoryDialog
 from ui.goods import AddorEditGoodsDialog
 from services import catagoryservice, goodsservice, stockservice, downloadservice
 import model
-
+import winsound
 from fractions import Fraction
 
 class GoodsTreeCtrl(ExpansionState, wx.TreeCtrl):
@@ -774,6 +774,7 @@ class StockRegisterPanel(wx.Panel):
         # 定义on_query函数（需在控件创建前定义）
         def on_query(evt):
             barcode = barcode_input.GetValue().strip()
+
             if not barcode:
                 wx.MessageBox('请输入条形码!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
                 return
@@ -787,6 +788,8 @@ class StockRegisterPanel(wx.Panel):
             goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
                 wx.MessageBox('未找到该条形码', '提示', wx.OK)
+                winsound.Beep(1000, 500)
+                ##这里需要添加错误提示音
                 return
 
             goods_info = goods_info_list[0]
@@ -805,11 +808,14 @@ class StockRegisterPanel(wx.Panel):
                 list_ctrl.SetItem(idx, 3, str(goods_num))
                 self.in_stock_items[barcode] = (idx, goods_name, goods_info.get('GOODS_PRICE', 0), goods_num)
 
+            #扫码成功提示音
+            winsound.MessageBeep(winsound.MB_OK)
+
             barcode_input.SetValue("")  # 清空输入框
 
         # 创建条形码输入框并绑定事件
         barcode_label = wx.StaticText(dlg, label="条形码：")
-        barcode_input = wx.TextCtrl(dlg)
+        barcode_input = wx.SearchCtrl(dlg, style=wx.TE_PROCESS_ENTER)
         barcode_input.Bind(wx.EVT_TEXT_ENTER, on_query)
 
         input_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -820,7 +826,7 @@ class StockRegisterPanel(wx.Panel):
         # 创建确认按钮
 
         query_button = wx.Button(dlg, label="查询")
-        confirm_button = wx.Button(dlg, label="确定执行出库")  # 新增确定按钮
+        confirm_button = wx.Button(dlg, label="确定执行入库")  # 新增确定按钮
 
         # 调整布局，将查询和确定按钮放在同一行
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -829,6 +835,9 @@ class StockRegisterPanel(wx.Panel):
         sizer.Add(button_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 5)  # 替换原单独添加的query_button
 
         confirm_button.Bind(wx.EVT_BUTTON, self.OnConfirmInStock)  # 绑定确认事件
+
+        barcode_input.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, on_query)  # 绑定搜索按钮事件
+        barcode_input.Bind(wx.EVT_TEXT_ENTER, on_query)  # 绑定回车键事件
 
         query_button.Bind(wx.EVT_BUTTON, on_query)
 
@@ -860,7 +869,7 @@ class StockRegisterPanel(wx.Panel):
 
         # 条形码输入框
         barcode_label = wx.StaticText(dlg, label="条形码：")
-        barcode_input = wx.TextCtrl(dlg)
+        barcode_input = wx.SearchCtrl(dlg, style=wx.TE_PROCESS_ENTER)
         input_sizer = wx.BoxSizer(wx.HORIZONTAL)
         input_sizer.Add(barcode_label, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         input_sizer.Add(barcode_input, 1, wx.ALL | wx.EXPAND, 5)
@@ -906,6 +915,8 @@ class StockRegisterPanel(wx.Panel):
             goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
             if not goods_info_list:
                 wx.MessageBox('未找到该条形码对应的物品信息!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+                ##这里需要添加错误提示音
+                winsound.Beep(1000, 500)
                 return
 
             goods_info = goods_info_list[0]  # 假设条形码唯一，取第一条记录
@@ -932,9 +943,14 @@ class StockRegisterPanel(wx.Panel):
                 list_ctrl.SetItem(index, 3, str(goods_num))
                 self.out_stock_items[barcode] = (index, goods_name, current_stock, goods_num)
 
+            #扫码成功提示音
+            winsound.MessageBeep(winsound.MB_OK)
+
             barcode_input.SetValue("")  # 清空输入框
 
         query_button.Bind(wx.EVT_BUTTON, on_query)
+        barcode_input.Bind(wx.EVT_SEARCHCTRL_SEARCH_BTN, on_query)  # 绑定搜索按钮事件
+        barcode_input.Bind(wx.EVT_TEXT_ENTER, on_query)  # 绑定回车键事件
 
         confirm_button.Bind(wx.EVT_BUTTON, self.OnConfirmOutStock)  # 绑定事件
 
