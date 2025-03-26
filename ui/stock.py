@@ -707,7 +707,7 @@ class StockRegisterPanel(wx.Panel):
         now_totalamounts = self.currentinventory * float(self.tc_goodsprice.GetValue())
         self.tc_now_totalamounts.SetValue(str(round(now_totalamounts, 2)))
 
-    def OnInStock(self, evt):
+    def OnInStock0(self, evt):
         self.SaveStock(1)
 
     def OnConfirmOutStock(self, event):
@@ -738,6 +738,117 @@ class StockRegisterPanel(wx.Panel):
 
         wx.MessageBox('更新库存成功', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
 
+
+    def OnConfirmInStock(self, event):
+        # 遍历in_stock_items执行入库
+        for barcode, (index, goods_name, price, in_stock_num) in self.in_stock_items.items():
+            # 获取物品ID
+            goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
+            goods_id = goods_info['ID']
+            stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
+
+            # 入库参数（stock_type=1表示入库）
+            params = {
+                'STOCK_TYPE': 1,
+                'STOCK_DATE': stock_date,
+                'GOODS_ID': goods_id,
+                'GOODS_NUM': str(in_stock_num),
+                'GOODS_UNIT': goods_info['GOODS_UNIT'],
+                'GOODS_PRICE': str(price),
+                'OP_PERSON': self.tc_op.GetValue(),
+                'OP_AREA': self.tc_address.GetValue()
+            }
+
+            stockservice.add_stock(params)  # 执行入库操作
+
+        # 关闭对话框并刷新界面
+        event.GetEventObject().GetTopLevelParent().Close()
+        wx.MessageBox('入库操作完成', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+
+    def OnInStock(self, evt):
+        self.in_stock_items = {}  # 存储入库物品信息
+
+        dlg = wx.Dialog(self, title="入库操作", size=(530, 300))
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # 定义on_query函数（需在控件创建前定义）
+        def on_query(evt):
+            barcode = barcode_input.GetValue().strip()
+            if not barcode:
+                wx.MessageBox('请输入条形码!', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+                return
+
+            try:
+                goods_num = Fraction(1)  # 默认入库数量为1
+            except:
+                wx.MessageBox('数量格式错误', '错误', wx.OK)
+                return
+
+            goods_info_list = goodsservice.get_goods_by_barcode_exact(barcode)
+            if not goods_info_list:
+                wx.MessageBox('未找到该条形码', '提示', wx.OK)
+                return
+
+            goods_info = goods_info_list[0]
+            goods_name = goods_info['GOODS_NAME']
+            goods_id = goods_info['ID']
+
+            if barcode in self.in_stock_items:
+                idx, _, current_stock, in_stock_num = self.in_stock_items[barcode]
+                new_in_stock = in_stock_num + goods_num
+                list_ctrl.SetItem(idx, 3, str(new_in_stock))
+                self.in_stock_items[barcode] = (idx, goods_name, current_stock, new_in_stock)
+            else:
+                idx = list_ctrl.InsertItem(list_ctrl.GetItemCount(), goods_name)
+                list_ctrl.SetItem(idx, 1, barcode)
+                list_ctrl.SetItem(idx, 2, str(goods_info.get('GOODS_PRICE', 0)))  # 物品单价
+                list_ctrl.SetItem(idx, 3, str(goods_num))
+                self.in_stock_items[barcode] = (idx, goods_name, goods_info.get('GOODS_PRICE', 0), goods_num)
+
+            barcode_input.SetValue("")  # 清空输入框
+
+        # 创建条形码输入框并绑定事件
+        barcode_label = wx.StaticText(dlg, label="条形码：")
+        barcode_input = wx.TextCtrl(dlg)
+        barcode_input.Bind(wx.EVT_TEXT_ENTER, on_query)
+
+        input_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        input_sizer.Add(barcode_label, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+        input_sizer.Add(barcode_input, 1, wx.ALL | wx.EXPAND, 5)
+        sizer.Add(input_sizer, 0, wx.ALL | wx.EXPAND, 5)
+
+        # 创建确认按钮
+
+        query_button = wx.Button(dlg, label="查询")
+        confirm_button = wx.Button(dlg, label="确定执行出库")  # 新增确定按钮
+
+        # 调整布局，将查询和确定按钮放在同一行
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        button_sizer.Add(query_button, 0, wx.ALL, 5)
+        button_sizer.Add(confirm_button, 0, wx.ALL, 5)
+        sizer.Add(button_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 5)  # 替换原单独添加的query_button
+
+        confirm_button.Bind(wx.EVT_BUTTON, self.OnConfirmInStock)  # 绑定确认事件
+
+        query_button.Bind(wx.EVT_BUTTON, on_query)
+
+
+        # 创建列表控件
+        list_ctrl = wx.ListCtrl(dlg, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_NONE | wx.LC_HRULES | wx.LC_VRULES)
+        list_ctrl.InsertColumn(0, "物品名称")
+        list_ctrl.InsertColumn(1, "条形码")
+        list_ctrl.InsertColumn(2, "单价")
+        list_ctrl.InsertColumn(3, "入库数量")
+        list_ctrl.SetColumnWidth(0, 150)
+        list_ctrl.SetColumnWidth(1, 150)
+        list_ctrl.SetColumnWidth(2, 100)
+        list_ctrl.SetColumnWidth(3, 100)
+        sizer.Add(list_ctrl, 1, wx.ALL | wx.EXPAND, 5)
+
+        dlg.SetSizer(sizer)
+        dlg.CenterOnParent()
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def OnOutStock(self, evt):
 
@@ -821,7 +932,10 @@ class StockRegisterPanel(wx.Panel):
                 list_ctrl.SetItem(index, 3, str(goods_num))
                 self.out_stock_items[barcode] = (index, goods_name, current_stock, goods_num)
 
+            barcode_input.SetValue("")  # 清空输入框
+
         query_button.Bind(wx.EVT_BUTTON, on_query)
+
         confirm_button.Bind(wx.EVT_BUTTON, self.OnConfirmOutStock)  # 绑定事件
 
         dlg.SetSizer(sizer)
