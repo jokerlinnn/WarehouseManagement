@@ -795,6 +795,8 @@ class StockRegisterPanel(wx.Panel):
             goods_info = goods_info_list[0]
             goods_name = goods_info['GOODS_NAME']
             goods_id = goods_info['ID']
+            current_stock = goodsservice.get_goods_stock(goods_id)
+
 
             if barcode in self.in_stock_items:
                 idx, _, current_stock, in_stock_num = self.in_stock_items[barcode]
@@ -804,7 +806,7 @@ class StockRegisterPanel(wx.Panel):
             else:
                 idx = list_ctrl.InsertItem(list_ctrl.GetItemCount(), goods_name)
                 list_ctrl.SetItem(idx, 1, barcode)
-                list_ctrl.SetItem(idx, 2, str(goods_info.get('GOODS_PRICE', 0)))  # 物品单价
+                list_ctrl.SetItem(idx, 2, str(current_stock))  # 当前库存
                 list_ctrl.SetItem(idx, 3, str(goods_num))
                 self.in_stock_items[barcode] = (idx, goods_name, goods_info.get('GOODS_PRICE', 0), goods_num)
 
@@ -846,7 +848,7 @@ class StockRegisterPanel(wx.Panel):
         list_ctrl = wx.ListCtrl(dlg, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_NONE | wx.LC_HRULES | wx.LC_VRULES)
         list_ctrl.InsertColumn(0, "物品名称")
         list_ctrl.InsertColumn(1, "条形码")
-        list_ctrl.InsertColumn(2, "单价")
+        list_ctrl.InsertColumn(2, "当前库存")
         list_ctrl.InsertColumn(3, "入库数量")
         list_ctrl.SetColumnWidth(0, 150)
         list_ctrl.SetColumnWidth(1, 150)

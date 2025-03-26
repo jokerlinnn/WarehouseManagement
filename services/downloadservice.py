@@ -2,7 +2,7 @@ import openpyxl
 from openpyxl.styles import Alignment
 from openpyxl.styles import Border, Side
 from openpyxl.styles import Color, PatternFill
-
+import sqlite3
 from collections import defaultdict
 from fractions import Fraction
 
@@ -22,6 +22,34 @@ instock_field_order = {'CATAGORY_NAME': 1, 'GOODS_NAME': 2, 'STOCK_DATE': 3, 'GO
 outstock_field_order = {'CATAGORY_NAME': 1, 'GOODS_NAME': 2, 'STOCK_DATE': 9, 'GOODS_NUM': 10,
                            'GOODS_UNIT': 11, 'GOODS_PRICE': 12, 'OP_AREA': 13, 'OP_PERSON': 14, 'TOTAL': 16}
 
+def get_total_in_out(goods_name):
+    # 连接数据库
+    con = sqlite3.connect('config/WarehouseManagement.db')
+    cur = con.cursor()
+
+    # 查询总入库数量
+    sql_in = '''
+    SELECT SUM(GOODS_NUM) FROM STOCK 
+    JOIN GOODS ON STOCK.GOODS_ID = GOODS.ID 
+    WHERE GOODS.GOODS_NAME =? AND STOCK.STOCK_TYPE = 1
+    '''
+    cur.execute(sql_in, (goods_name,))
+    total_in = cur.fetchone()[0] or 0
+
+    # 查询总出库数量
+    sql_out = '''
+    SELECT SUM(GOODS_NUM) FROM STOCK 
+    JOIN GOODS ON STOCK.GOODS_ID = GOODS.ID 
+    WHERE GOODS.GOODS_NAME =? AND STOCK.STOCK_TYPE = 0
+    '''
+    cur.execute(sql_out, (goods_name,))
+    total_out = cur.fetchone()[0] or 0
+
+    # 关闭连接
+    cur.close()
+    con.close()
+
+    return total_in, total_out
 
 def downloadInStockDetail(filename, title, data):
 
@@ -407,84 +435,75 @@ def downloadAllStockDetail(filename, title, data):
             
     wb.save(filename)
 
-def caculate_total(sheet, row_start, row_end): 
-    '''
-       入库合计
-       如果同一物品的入库规格不一样，将不进行统计，将单元格填充黄色背景以提示客户;
-       如果同一物品的入库规格一致，那么将进行统计，并合并单元格;
-    '''
+def caculate_total(sheet, row_start, row_end):
     # 入库规格所在列
     unit_col = instock_field_order['GOODS_UNIT']
     # 入库统计所在列
     total_col = instock_field_order['TOTAL']
     # 入库物品数量
     goodsnum_col = instock_field_order['GOODS_NUM']
-    
+
     in_total = None
-    
+
     # 判断入库规格是否一致
-    unit_num = len({ sheet.cell(row, unit_col).value for row in range(row_start, row_end + 1) if sheet.cell(row, unit_col).value is not None })
+    unit_num = len({sheet.cell(row, unit_col).value for row in range(row_start, row_end + 1) if sheet.cell(row, unit_col).value is not None})
     if unit_num > 1:
         # 入库规格不一致
         for row in range(row_start, row_end + 1):
-            sheet.cell(row, total_col ).value = sheet.cell(row, goodsnum_col ).value
-            sheet.cell(row, total_col ).fill = fill
+            sheet.cell(row, total_col).value = sheet.cell(row, goodsnum_col).value
+            sheet.cell(row, total_col).fill = fill
     else:
         total = sum([Fraction(sheet.cell(row, goodsnum_col).value) for row in range(row_start, row_end + 1) if sheet.cell(row, goodsnum_col).value is not None])
         if total.denominator == 1:
             sheet.cell(row_start, total_col).value = str(total)
-
         else:
-            total1 = str(int(total)) + ' +' + str(total.numerator - int(total) * total.denominator) + '/' + \
-                     str(total.denominator)
-
+            total1 = str(int(total)) + ' +' + str(total.numerator - int(total) * total.denominator) + '/' + str(total.denominator)
             sheet.cell(row_start, total_col).value = total1
 
-        sheet.merge_cells(start_row=row_start, start_column=total_col,end_row=row_end, end_column=total_col)  
-        in_total = total    
+        sheet.merge_cells(start_row=row_start, start_column=total_col, end_row=row_end, end_column=total_col)
+        in_total = total
+
     # 出库规格所在列
     unit_col = outstock_field_order['GOODS_UNIT']
     # 出库统计所在列
     total_col = outstock_field_order['TOTAL']
     # 出库物品数量
     goodsnum_col = outstock_field_order['GOODS_NUM']
-    
+
     out_total = None
-    
+
     # 判断出库规格是否一致
-    unit_num = len({ sheet.cell(row, unit_col).value for row in range(row_start, row_end + 1) if sheet.cell(row, unit_col).value is not None })
+    unit_num = len({sheet.cell(row, unit_col).value for row in range(row_start, row_end + 1) if sheet.cell(row, unit_col).value is not None})
     if unit_num > 1:
         # 出库规格不一致
         for row in range(row_start, row_end + 1):
-            sheet.cell(row, total_col ).value = sheet.cell(row, goodsnum_col ).value
-            sheet.cell(row, total_col ).fill = fill
+            sheet.cell(row, total_col).value = sheet.cell(row, goodsnum_col).value
+            sheet.cell(row, total_col).fill = fill
     else:
         total = sum([Fraction(sheet.cell(row, goodsnum_col).value) for row in range(row_start, row_end + 1) if sheet.cell(row, goodsnum_col).value is not None])
         if total.denominator == 1:
             sheet.cell(row_start, total_col).value = str(total)
-
         else:
-            total1 = str(int(total)) + ' +' + str(total.numerator - int(total) * total.denominator) + '/' + \
-                     str(total.denominator)
-
+            total1 = str(int(total)) + ' +' + str(total.numerator - int(total) * total.denominator) + '/' + str(total.denominator)
             sheet.cell(row_start, total_col).value = total1
 
-        sheet.merge_cells(start_row=row_start, start_column=total_col,end_row=row_end, end_column=total_col)  
+        sheet.merge_cells(start_row=row_start, start_column=total_col, end_row=row_end, end_column=total_col)
         out_total = total
-    
-    # 结余    
+
+    # 获取总库存的出入库数量
+    goodsname_col = instock_field_order['GOODS_NAME']
+    goods_name = sheet.cell(row_start, goodsname_col).value
+    total_in, total_out = get_total_in_out(goods_name)
+    total_in = Fraction(total_in)
+    total_out = Fraction(total_out)
+
+    # 结余
     c = sheet.max_column
-    if in_total is not None and out_total is not None:
-        all_total = in_total - out_total
-        if all_total.denominator == 1:
-            sheet.cell(row_start, c).value = str(all_total)
+    all_total = total_in - total_out
+    if all_total.denominator == 1:
+        sheet.cell(row_start, c).value = str(all_total)
+    else:
+        total1 = str(int(all_total)) + ' +' + str(all_total.numerator - int(all_total) * all_total.denominator) + '/' + str(all_total.denominator)
+        sheet.cell(row_start, c).value = total1
 
-        else:
-            total1 = str(int(all_total)) + ' +' + str(
-                all_total.numerator - int(all_total) * all_total.denominator) + '/' + \
-                     str(all_total.denominator)
-
-            sheet.cell(row_start, c).value = total1
-
-        sheet.merge_cells(start_row=row_start, start_column=c,end_row=row_end, end_column=c)
-        
+    sheet.merge_cells(start_row=row_start, start_column=c, end_row=row_end, end_column=c)
