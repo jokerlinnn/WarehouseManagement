@@ -711,61 +711,72 @@ class StockRegisterPanel(wx.Panel):
         self.SaveStock(1)
 
     def OnConfirmOutStock(self, event):
-        # 遍历out_stock_items执行出库
-        for barcode, (index, goods_name, current_stock, reduce_stock) in self.out_stock_items.items():
-            # 获取物品ID（需从goods_info中获取）
-            goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
-            goods_id = goods_info['ID']
-            stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
+        if len(self.in_stock_items) == 0:
+            wx.MessageBox('未输入需要出库的物品', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+            return
+        else:
+            # 遍历out_stock_items执行出库
+            for barcode, (index, goods_name, current_stock, reduce_stock) in self.out_stock_items.items():
+                # 获取物品ID（需从goods_info中获取）
+                goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
+                goods_id = goods_info['ID']
+                stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
 
-            # 出库参数（stock_type需根据业务逻辑设置，如0表示出库）
-            params = {
-                'STOCK_TYPE': 0,
-                'STOCK_DATE': stock_date,
-                'GOODS_ID': goods_id,
-                'GOODS_NUM': str(reduce_stock),  # 减少的数量
-                'GOODS_UNIT': goods_info['GOODS_UNIT'],
-                'GOODS_PRICE': goods_info['GOODS_PRICE'],
-                'OP_PERSON': self.tc_op.GetValue(),  # 可从界面获取操作人
-                'OP_AREA': self.tc_address.GetValue()  # 可从界面获取地点
-            }
+                # 出库参数（stock_type需根据业务逻辑设置，如0表示出库）
+                params = {
+                    'STOCK_TYPE': 0,
+                    'STOCK_DATE': stock_date,
+                    'GOODS_ID': goods_id,
+                    'GOODS_NUM': str(reduce_stock),  # 减少的数量
+                    'GOODS_UNIT': goods_info['GOODS_UNIT'],
+                    'GOODS_PRICE': goods_info['GOODS_PRICE'],
+                    'OP_PERSON': self.tc_op.GetValue(),  # 可从界面获取操作人
+                    'OP_AREA': self.tc_address.GetValue()  # 可从界面获取地点
+                }
 
-            # 执行出库操作
-            stockservice.add_stock(params)
+                # 执行出库操作
+                stockservice.add_stock(params)
 
 
-        # 关闭对话框并刷新库存显示
-        event.GetEventObject().GetTopLevelParent().Close()
-        self.queryStocksByDate()
+            # 关闭对话框并刷新库存显示
+            event.GetEventObject().GetTopLevelParent().Close()
+            self.queryStocksByDate()
 
-        wx.MessageBox('更新库存成功', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+            wx.MessageBox('更新库存成功', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
 
 
     def OnConfirmInStock(self, event):
-        # 遍历in_stock_items执行入库
-        for barcode, (index, goods_name, price, in_stock_num) in self.in_stock_items.items():
-            # 获取物品ID
-            goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
-            goods_id = goods_info['ID']
-            stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
 
-            # 入库参数（stock_type=1表示入库）
-            params = {
-                'STOCK_TYPE': 1,
-                'STOCK_DATE': stock_date,
-                'GOODS_ID': goods_id,
-                'GOODS_NUM': str(in_stock_num),
-                'GOODS_UNIT': goods_info['GOODS_UNIT'],
-                'GOODS_PRICE': str(price),
-                'OP_PERSON': self.tc_op.GetValue(),
-                'OP_AREA': self.tc_address.GetValue()
-            }
+        if len(self.in_stock_items) == 0:
+            wx.MessageBox('未输入需要入库的物品', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+            return
 
-            stockservice.add_stock(params)  # 执行入库操作
+        else:
+            # 遍历in_stock_items执行入库
+            for barcode, (index, goods_name, price, in_stock_num) in self.in_stock_items.items():
+                # 获取物品ID
+                goods_info = goodsservice.get_goods_by_barcode_exact(barcode)[0]
+                goods_id = goods_info['ID']
+                stock_date = wx.DateTime.Today().Format('%Y-%m-%d')
 
-        event.GetEventObject().GetTopLevelParent().Close()
-        self.queryStocksByDate()
-        wx.MessageBox('入库操作完成', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
+                # 入库参数（stock_type=1表示入库）
+                params = {
+                    'STOCK_TYPE': 1,
+                    'STOCK_DATE': stock_date,
+                    'GOODS_ID': goods_id,
+                    'GOODS_NUM': str(in_stock_num),
+                    'GOODS_UNIT': goods_info['GOODS_UNIT'],
+                    'GOODS_PRICE': str(price),
+                    'OP_PERSON': self.tc_op.GetValue(),
+                    'OP_AREA': self.tc_address.GetValue()
+                }
+
+                stockservice.add_stock(params)  # 执行入库操作
+
+
+            event.GetEventObject().GetTopLevelParent().Close()
+            self.queryStocksByDate()
+            wx.MessageBox('入库操作完成', '温馨提示', wx.YES_DEFAULT | wx.ICON_EXCLAMATION)
 
     def OnInStock(self, evt):
         self.in_stock_items = {}  # 存储入库物品信息
